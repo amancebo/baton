@@ -25,11 +25,12 @@
 
 #include "config.h"
 
-#if IRODS_VERSION_INTEGER && IRODS_VERSION_INTEGER >= 4001008
-#include <openssl/md5.h>
-#else
-#include "md5Checksum.h"
-#endif
+/* #if IRODS_VERSION_INTEGER && IRODS_VERSION_INTEGER >= 4001008 */
+/* #include <openssl/md5.h> */
+#include <sha256.h>
+/* #else */
+/* #include "md5Checksum.h" */
+/* #endif */
 
 // iRODS 3.x shares the same checksum API as iRODS 4.0.x, while 4.1.x
 // uses openssl directly. Backwards compatibility was broken for the
@@ -42,10 +43,10 @@
 // OpenSSL MD5. We just use whichever is present, which the ifdefs
 // ensure will be the correct one.
 
-void compat_MD5Init(MD5_CTX *context);
+void compat_SHA256Init(SHA256_CTX *context);
 
-void compat_MD5Update(MD5_CTX *context, unsigned char *input, unsigned int len);
+void compat_SHA256Update(SHA256_CTX *context, unsigned char *input, unsigned int len);
 
-void compat_MD5Final(unsigned char digest[16], MD5_CTX *context);
+void compat_SHA256Final(unsigned char digest[32], SHA256_CTX *context);
 
 #endif // _BATON_COMPAT_CHECKSUM_H

@@ -135,27 +135,27 @@ static int have_rodsadmin() {
     return !system(command);
 }
 
-static void confirm_checksum(FILE *in, const char *expected_md5) {
+static void confirm_checksum(FILE *in, const char *expected_sha256) {
     char buffer[1024];
-    unsigned char digest[16];
+    unsigned char digest[32];
 
-    MD5_CTX context;
-    compat_MD5Init(&context);
+    SHA256_CTX context;
+    compat_SHA256Init(&context);
 
     size_t nr;
     while ((nr = fread(buffer, 1, 1024, in)) > 0) {
-        compat_MD5Update(&context, (unsigned char *) buffer, nr);
+        compat_SHA256Update(&context, (unsigned char *) buffer, nr);
     }
 
-    compat_MD5Final(digest, &context);
+    compat_SHA256Final(digest, &context);
 
-    char *md5 = calloc(33, sizeof (char));
-    for (int i = 0; i < 16; i++) {
-        snprintf(md5 + i * 2, 3, "%02x", digest[i]);
+    char *sha256 = calloc(33, sizeof (char));
+    for (int i = 0; i < 32; i++) {
+        snprintf(sha256 + i * 2, 3, "%02x", digest[i]);
     }
 
-    ck_assert_str_eq(md5, expected_md5);
-    free(md5);
+    ck_assert_str_eq(sha256, expected_sha256);
+    free(sha256);
 
     return;
 }
@@ -1920,7 +1920,7 @@ START_TEST(test_slurp_data_obj) {
                                     &slurp_error);
         ck_assert_int_eq(slurp_error.code, 0);
         ck_assert_int_eq(strnlen(data, 10240), 10240);
-        ck_assert_str_eq(obj->md5_last_read,
+        ck_assert_str_eq(obj->sha256_last_read,
                          "4efe0c1befd6f6ac4621cbdb13241246");
 
         ck_assert_int_eq(close_data_obj(conn, obj), 0);
@@ -1993,7 +1993,7 @@ START_TEST(test_get_data_obj_file) {
     ck_assert_int_eq(error.code, 0);
     close(fd);
 
-    // Check the MD5 of the tempfile
+    // Check the SHA-256 of the tempfile
     FILE *tmp = fopen(template, "r");
     confirm_checksum(tmp, "4efe0c1befd6f6ac4621cbdb13241246");
     fclose(tmp);
@@ -2066,7 +2066,7 @@ START_TEST(test_write_data_obj) {
         ck_assert_int_eq(get_status, 0);
         close(fd);
 
-        // Check the MD5 of the tempfile
+        // Check the SHA-256 of the tempfile
         FILE *tmp = fopen(template, "r");
         confirm_checksum(tmp, "4efe0c1befd6f6ac4621cbdb13241246");
         fclose(tmp);
@@ -2081,7 +2081,7 @@ START_TEST(test_put_data_obj) {
     option_flags flags = 0;
     rodsEnv env;
     rcComm_t *conn = rods_login(&env);
-    char *md5 = "4efe0c1befd6f6ac4621cbdb13241246";
+    char *sha256 = "4efe0c1befd6f6ac4621cbdb13241246";
 
     char file_path[MAX_PATH_LEN];
     snprintf(file_path, MAX_PATH_LEN, "%s/%s/lorem_10k.txt",
@@ -2100,7 +2100,7 @@ START_TEST(test_put_data_obj) {
 
     baton_error_t put_error;
     int put_status =
-        put_data_obj(conn, file_path, &rods_obj_path, TEST_RESOURCE, md5,
+        put_data_obj(conn, file_path, &rods_obj_path, TEST_RESOURCE, sha256,
                      flags | VERIFY_CHECKSUM,
                      &put_error);
     ck_assert_int_eq(put_error.code, 0);
@@ -2118,7 +2118,7 @@ START_TEST(test_put_data_obj) {
     ck_assert_int_eq(list_error.code, 0);
     json_t *checksum = json_object_get(result, JSON_CHECKSUM_KEY);
     ck_assert(json_is_string(checksum));
-    ck_assert_str_eq(json_string_value(checksum), md5);
+    ck_assert_str_eq(json_string_value(checksum), sha256);
     json_decref(result);
 
     // Get the data object to temp file
@@ -2133,7 +2133,7 @@ START_TEST(test_put_data_obj) {
     ck_assert_int_eq(get_status, 0);
     close(fd);
 
-    // Check the MD5 of the tempfile
+    // Check the SHA-256 of the tempfile
     FILE *tmp = fopen(template, "r");
     confirm_checksum(tmp, "4efe0c1befd6f6ac4621cbdb13241246");
     fclose(tmp);

@@ -162,9 +162,9 @@ size_t write_data_obj(rcComm_t *conn, FILE *in, rodsPath_t *rods_path,
     obj = open_data_obj(conn, rods_path, O_WRONLY, flags, error);
     if (error->code != 0) goto finally;
 
-    unsigned char digest[16];
-    MD5_CTX context;
-    compat_MD5Init(&context);
+    unsigned char digest[32];
+    SHA256_CTX context;
+    compat_SHA256Init(&context);
 
     size_t nr, nw;
     while ((nr = fread(buffer, 1, buffer_size, in)) > 0) {
@@ -179,12 +179,12 @@ size_t write_data_obj(rcComm_t *conn, FILE *in, rodsPath_t *rods_path,
         }
         num_written += nw;
 
-        compat_MD5Update(&context, (unsigned char*) buffer, nr);
+        compat_SHA256Update(&context, (unsigned char*) buffer, nr);
         memset(buffer, 0, buffer_size);
     }
 
-    compat_MD5Final(digest, &context);
-    set_md5_last_read(obj, digest);
+    compat_SHA256Final(digest, &context);
+    set_sha256_last_read(obj, digest);
 
     int status = close_data_obj(conn, obj);
     if (status < 0) {
@@ -202,13 +202,13 @@ size_t write_data_obj(rcComm_t *conn, FILE *in, rodsPath_t *rods_path,
         goto finally;
     }
 
-    if (!validate_md5_last_read(conn, obj)) {
-        logmsg(WARN, "Checksum mismatch for '%s' having MD5 %s on reading",
-               obj->path, obj->md5_last_read);
+    if (!validate_sha256_last_read(conn, obj)) {
+        logmsg(WARN, "Checksum mismatch for '%s' having SHA-256 %s on reading",
+               obj->path, obj->sha256_last_read);
     }
 
-    logmsg(NOTICE, "Wrote %zu bytes to '%s' having MD5 %s",
-           num_written, obj->path, obj->md5_last_read);
+    logmsg(NOTICE, "Wrote %zu bytes to '%s' having SHA-256 %s",
+           num_written, obj->path, obj->sha256_last_read);
 
 finally:
     if (obj)    free_data_obj(obj);

@@ -37,3 +37,4 @@ src/baton-metamod
 src/baton-metaquery
 src/baton-metasuper
 src/baton-specificquery
+compile_flags.txt

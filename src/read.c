@@ -20,6 +20,7 @@
  */
 
 #include <assert.h>
+#include <sha256.h>
 
 #include "config.h"
 #include "compat_checksum.h"
@@ -185,8 +186,8 @@ data_obj_file_t *open_data_obj(rcComm_t *conn, rodsPath_t *rods_path,
     data_obj->flags               = obj_open_in.openFlags;
     data_obj->open_obj            = calloc(1, sizeof (openedDataObjInp_t));
     data_obj->open_obj->l1descInx = descriptor;
-    data_obj->md5_last_read       = calloc(33, sizeof (char));
-    data_obj->md5_last_write      = calloc(33, sizeof (char));
+    data_obj->sha256_last_read    = calloc(33, sizeof (char));
+    data_obj->sha256_last_write   = calloc(33, sizeof (char));
 
     return data_obj;
 
@@ -207,8 +208,8 @@ void free_data_obj(data_obj_file_t *data_obj) {
     assert(data_obj);
 
     if (data_obj->open_obj)       free(data_obj->open_obj);
-    if (data_obj->md5_last_read)  free(data_obj->md5_last_read);
-    if (data_obj->md5_last_write) free(data_obj->md5_last_write);
+    if (data_obj->sha256_last_read)  free(data_obj->sha256_last_read);
+    if (data_obj->sha256_last_write) free(data_obj->sha256_last_write);
 
     free(data_obj);
 }
@@ -264,9 +265,9 @@ size_t read_data_obj(rcComm_t *conn, data_obj_file_t *data_obj,
         goto finally;
     }
 
-    unsigned char digest[16];
-    MD5_CTX context;
-    compat_MD5Init(&context);
+    unsigned char digest[32];
+    SHA256_CTX context;
+    compat_SHA256Init(&context);
 
     size_t nr, nw;
     while ((nr = read_chunk(conn, data_obj, buffer, buffer_size, error)) > 0) {
@@ -283,12 +284,12 @@ size_t read_data_obj(rcComm_t *conn, data_obj_file_t *data_obj,
         nw = nr;
         num_written += nw;
 
-        compat_MD5Update(&context, (unsigned char*) buffer, nr);
+        compat_SHA256Update(&context, (unsigned char*) buffer, nr);
         memset(buffer, 0, buffer_size);
     }
 
-    compat_MD5Final(digest, &context);
-    set_md5_last_read(data_obj, digest);
+    compat_SHA256Final(digest, &context);
+    set_sha256_last_read(data_obj, digest);
 
     if (num_read != num_written) {
         set_baton_error(error, -1, "Read %zu bytes from '%s' but wrote "
@@ -296,13 +297,13 @@ size_t read_data_obj(rcComm_t *conn, data_obj_file_t *data_obj,
         goto finally;
     }
 
-    if (!validate_md5_last_read(conn, data_obj)) {
-        logmsg(WARN, "Checksum mismatch for '%s' having MD5 %s on reading",
-               data_obj->path, data_obj->md5_last_read);
+    if (!validate_sha256_last_read(conn, data_obj)) {
+        logmsg(WARN, "Checksum mismatch for '%s' having SHA-256 %s on reading",
+               data_obj->path, data_obj->sha256_last_read);
     }
 
-    logmsg(NOTICE, "Wrote %zu bytes from '%s' to stream having MD5 %s",
-           num_written, data_obj->path, data_obj->md5_last_read);
+    logmsg(NOTICE, "Wrote %zu bytes from '%s' to stream having SHA-256 %s",
+           num_written, data_obj->path, data_obj->sha256_last_read);
 
 finally:
     if (buffer) free(buffer);
@@ -324,9 +325,9 @@ char *slurp_data_obj(rcComm_t *conn, data_obj_file_t *data_obj,
         goto error;
     }
 
-    unsigned char digest[16];
-    MD5_CTX context;
-    compat_MD5Init(&context);
+    unsigned char digest[32];
+    SHA256_CTX context;
+    compat_SHA256Init(&context);
 
     size_t capacity = buffer_size;
     size_t num_read = 0;
@@ -364,17 +365,17 @@ char *slurp_data_obj(rcComm_t *conn, data_obj_file_t *data_obj,
 
     logmsg(DEBUG, "Final capacity %zu, offset %zu", capacity, num_read);
 
-    compat_MD5Update(&context, (unsigned char *) content, num_read);
-    compat_MD5Final(digest, &context);
-    set_md5_last_read(data_obj, digest);
+    compat_SHA256Update(&context, (unsigned char *) content, num_read);
+    compat_SHA256Final(digest, &context);
+    set_sha256_last_read(data_obj, digest);
 
-    if (!validate_md5_last_read(conn, data_obj)) {
-        logmsg(WARN, "Checksum mismatch for '%s' having MD5 %s on reading",
-               data_obj->path, data_obj->md5_last_read);
+    if (!validate_sha256_last_read(conn, data_obj)) {
+        logmsg(WARN, "Checksum mismatch for '%s' having SHA-256 %s on reading",
+               data_obj->path, data_obj->sha256_last_read);
     }
 
-    logmsg(NOTICE, "Wrote %zu bytes from '%s' to buffer having MD5 %s",
-           num_read, data_obj->path, data_obj->md5_last_read);
+    logmsg(NOTICE, "Wrote %zu bytes from '%s' to buffer having SHA-256 %s",
+           num_read, data_obj->path, data_obj->sha256_last_read);
 
     if (buffer) free(buffer);
 
@@ -572,30 +573,30 @@ error:
     return NULL;
 }
 
-void set_md5_last_read(data_obj_file_t *data_obj, unsigned char digest[16]) {
-    char *md5 = data_obj->md5_last_read;
-    for (int i = 0; i < 16; i++) {
-        snprintf(md5 + i * 2, 3, "%02x", digest[i]);
+void set_sha256_last_read(data_obj_file_t *data_obj, unsigned char digest[32]) {
+    char *sha256 = data_obj->sha256_last_read;
+    for (int i = 0; i < 32; i++) {
+        snprintf(sha256 + i * 2, 3, "%02x", digest[i]);
     }
 }
 
-int validate_md5_last_read(rcComm_t *conn, data_obj_file_t *data_obj) {
-    dataObjInp_t obj_md5_in;
-    memset(&obj_md5_in, 0, sizeof obj_md5_in);
+int validate_sha256_last_read(rcComm_t *conn, data_obj_file_t *data_obj) {
+    dataObjInp_t obj_sha256_in;
+    memset(&obj_sha256_in, 0, sizeof obj_sha256_in);
 
-    snprintf(obj_md5_in.objPath, MAX_NAME_LEN, "%s", data_obj->path);
+    snprintf(obj_sha256_in.objPath, MAX_NAME_LEN, "%s", data_obj->path);
 
-    char *md5 = NULL;
-    int status = rcDataObjChksum(conn, &obj_md5_in, &md5);
+    char *sha256 = NULL;
+    int status = rcDataObjChksum(conn, &obj_sha256_in, &sha256);
     if (status < 0) goto finally;
 
-    logmsg(DEBUG, "Comparing last read MD5 of '%s' with expected MD5 of '%s'",
-           data_obj->md5_last_read, md5);
+    logmsg(DEBUG, "Comparing last read SHA-256 of '%s' with expected SHA-256 of '%s'",
+           data_obj->sha256_last_read, sha256);
 
-    status = str_equals_ignore_case(data_obj->md5_last_read, md5, 32);
+    status = str_equals_ignore_case(data_obj->sha256_last_read, sha256, 32);
 
 finally:
-    if (md5) free(md5);
+    if (sha256) free(sha256);
 
     return status;
 }

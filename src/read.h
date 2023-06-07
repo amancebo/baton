@@ -38,10 +38,10 @@ typedef struct data_obj_file {
     int flags;
     /** Opened data object handle */
     openedDataObjInp_t *open_obj;
-    /** The MD5 calculated last time the object was read completely */
-    char *md5_last_read;
-    /** The MD5 calculated last time the object was written completely */
-    char *md5_last_write;
+    /** The SHA-256 calculated last time the object was read completely **/
+    char *sha256_last_read;
+    /** The SHA-256 calculated last time the object was written completely **/
+    char *sha256_last_write;
 } data_obj_file_t;
 
 /**
@@ -126,8 +126,8 @@ int get_data_obj_stream(rcComm_t *conn, rodsPath_t *rods_path, FILE *out,
 char *checksum_data_obj(rcComm_t *conn, rodsPath_t *rods_path,
                         option_flags flags, baton_error_t *error);
 
-void set_md5_last_read(data_obj_file_t *obj_file, unsigned char digest[16]);
+void set_sha256_last_read(data_obj_file_t *obj_file, unsigned char digest[32]);
 
-int validate_md5_last_read(rcComm_t *conn, data_obj_file_t *obj_file);
+int validate_sha256_last_read(rcComm_t *conn, data_obj_file_t *obj_file);
 
 #endif // _BATON_READ_H
