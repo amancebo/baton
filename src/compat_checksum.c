@@ -21,20 +21,20 @@
 #include "compat_checksum.h"
 
 #if IRODS_VERSION_INTEGER && IRODS_VERSION_INTEGER >= 4001008
-void compat_SHAInit(SHA_CTX *context) {
+void compat_SHA256Init(SHA256_CTX *context) {
     SHA256_Init(context);
 }
 
-void compat_SHA256Update(SHA_CTX *context, unsigned char *input,
+void compat_SHA256Update(SHA256_CTX *context, unsigned char *input,
                       unsigned int len) {
     SHA256_Update(context, input, len);
 }
 
-void compat_SHA256Final(unsigned char digest[32], SHA_CTX *context) {
+void compat_SHA256Final(unsigned char digest[32], SHA256_CTX *context) {
     SHA256_Final(digest, context);
 }
 #else
-void compat_SHAInit(SHA256_CTX *context) {
+void compat_SHA256Init(SHA256_CTX *context) {
     SHA256_Init(context);
 }
 
