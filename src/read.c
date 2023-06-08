@@ -20,7 +20,7 @@
  */
 
 #include <assert.h>
-#include <sha256.h>
+#include <openssl/sha.h>
 
 #include "config.h"
 #include "compat_checksum.h"

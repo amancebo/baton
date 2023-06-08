@@ -27,7 +27,7 @@
 
 /* #if IRODS_VERSION_INTEGER && IRODS_VERSION_INTEGER >= 4001008 */
 /* #include <openssl/md5.h> */
-#include <sha256.h>
+#include <openssl/sha.h>
 /* #else */
 /* #include "md5Checksum.h" */
 /* #endif */
