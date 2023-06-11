@@ -186,8 +186,8 @@ data_obj_file_t *open_data_obj(rcComm_t *conn, rodsPath_t *rods_path,
     data_obj->flags               = obj_open_in.openFlags;
     data_obj->open_obj            = calloc(1, sizeof (openedDataObjInp_t));
     data_obj->open_obj->l1descInx = descriptor;
-    data_obj->sha256_last_read    = calloc(33, sizeof (char));
-    data_obj->sha256_last_write   = calloc(33, sizeof (char));
+    data_obj->sha256_last_read    = calloc(65, sizeof (char));
+    data_obj->sha256_last_write   = calloc(65, sizeof (char));
 
     return data_obj;
 
@@ -593,7 +593,7 @@ int validate_sha256_last_read(rcComm_t *conn, data_obj_file_t *data_obj) {
     logmsg(DEBUG, "Comparing last read SHA-256 of '%s' with expected SHA-256 of '%s'",
            data_obj->sha256_last_read, sha256);
 
-    status = str_equals_ignore_case(data_obj->sha256_last_read, sha256, 32);
+    status = str_equals_ignore_case(data_obj->sha256_last_read, sha256, 64);
 
 finally:
     if (sha256) free(sha256);

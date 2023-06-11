@@ -149,7 +149,7 @@ static void confirm_checksum(FILE *in, const char *expected_sha256) {
 
     compat_SHA256Final(digest, &context);
 
-    char *sha256 = calloc(33, sizeof (char));
+    char *sha256 = calloc(65, sizeof (char));
     for (int i = 0; i < 32; i++) {
         snprintf(sha256 + i * 2, 3, "%02x", digest[i]);
     }
