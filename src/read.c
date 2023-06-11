@@ -587,16 +587,23 @@ int validate_sha256_last_read(rcComm_t *conn, data_obj_file_t *data_obj) {
     snprintf(obj_sha256_in.objPath, MAX_NAME_LEN, "%s", data_obj->path);
 
     char *sha256 = NULL;
+    // char base64_decoded_sha256[strlen(data_obj->sha256_last_read)];
+    char *base64_decoded_sha256 = "0";
     int status = rcDataObjChksum(conn, &obj_sha256_in, &sha256);
     if (status < 0) goto finally;
 
     logmsg(DEBUG, "Comparing last read SHA-256 of '%s' with expected SHA-256 of '%s'",
            data_obj->sha256_last_read, sha256);
 
+    decode_base64(&(sha256[5]), base64_decoded_sha256);
+
     status = str_equals_ignore_case(data_obj->sha256_last_read, sha256, 64);
+    // status = str_equals_ignore_case(data_obj->sha256_last_read, base64_decoded_sha256, 64);
+
 
 finally:
     if (sha256) free(sha256);
+    if (base64_decoded_sha256) free(base64_decoded_sha256);
 
     return status;
 }

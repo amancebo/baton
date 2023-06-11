@@ -56,4 +56,6 @@ int maybe_utf8 (const char *str, size_t max_len);
 
 size_t to_utf8(const char *input, char *output, size_t max_len);
 
+void decode_base64(char *input, char *output);
+
 #endif // _BATON_UTILITIES_H

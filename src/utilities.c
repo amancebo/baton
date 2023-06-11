@@ -377,3 +377,32 @@ int maybe_utf8 (const char *str, size_t max_len) {
 
     return 1;
 }
+
+void decode_base64(char *input, char *output) {
+  const int base64_input_buff_size = 2;
+  const int base64_output_buff_size = 3;
+  static const char base64_alphabet[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  int size = strlen(input);
+  char input_buff[base64_input_buff_size];
+  char output_buff[base64_output_buff_size + 1];
+  // kout is the index of the output string
+  int kout = 0;
+  // kin is the index of the input string
+  for (int kin = 0; kin < size; kin += base64_input_buff_size) {
+    strncpy(input_buff, &(input[kin]), base64_input_buff_size);
+    unsigned int result = 0;
+    for (int j = 0; j < base64_input_buff_size; j++) {
+      for (int i = 0; i < 64; i++) {
+        if (input_buff[j] == base64_alphabet[i]) {
+          result += i << (6 * (base64_input_buff_size - 1 - j));
+        }
+      }
+    }
+    for (int c = 0; c < base64_output_buff_size; c++) {
+      output[c + kout] = output_buff[c];
+    }
+    kout += base64_output_buff_size;
+  }
+}
